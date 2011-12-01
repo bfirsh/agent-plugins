@@ -49,9 +49,6 @@ $device =~ s/^\/dev\///;
 ## Return codes for Nagios
 my %ERRORS=('OK'=>0,'WARNING'=>1,'CRITICAL'=>2,'UNKNOWN'=>3,'DEPENDENT'=>4);
 
-## This is a global return value - set to the worst result we get overall
-my $retval = 0;
-
 my (%active_devs, %failed_devs, %spare_devs);
 
 my $status = "ok";
@@ -90,7 +87,6 @@ while (<FILE>) {
 	my $stat = $3;
 	if ($devs_total > $devs_up or $failed_devs{$dev} ne "none") {
 		$status = "err";
-		$retval = 1;
 	}
 
 	push(@status_string, "$dev [$stat] has $devs_up of $devs_total devices active");
@@ -100,7 +96,6 @@ print "status $status " . join(", ", @status_string);
 print "\n";
 
 close FILE;
-exit $retval;
 
 # =====
 sub usage()

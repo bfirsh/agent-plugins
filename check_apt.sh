@@ -1,6 +1,5 @@
-#!/usr/bin/python
-# Cloudkick plugin to check for updated apt packages
-# Requires python-apt package
+#!/bin/bash
+# Cloudkick plugin to check for updated apt packages on Ubuntu
 #
 # Copyright (C) 2010 by Ben Firshman <ben@firshman.co.uk>
 #
@@ -22,36 +21,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import apt
 
-DIST_UPGRADE = True
-SECURITY_STATUS = 'err'
-# If you do not want a warning for updates which aren't security updates,
-# set this to 'ok'
-CHANGED_STATUS = 'warn'
+# Piggy back Ubuntu's cached update notices
+UPDATES_AVAILABLE=`/usr/lib/update-notifier/update-motd-updates-available`
+UPDATE_COUNT=`echo "$UPDATES_AVAILABLE" | awk 'NR==2 { print $1 }'`
+SECURITY_COUNT=`echo "$UPDATES_AVAILABLE" | awk 'NR==3 { print $1 }'`
+UPDATES_SINGLE_LINE=`echo "$UPDATES_AVAILABLE" | tr "\n" " "`
 
-cache = apt.Cache()
-cache.update()
-cache.open(None)
-# Doesn't actually upgrade unless we call commit
-cache.upgrade(DIST_UPGRADE)
+REBOOT_REQUIRED=`/usr/lib/update-notifier/update-motd-reboot-required`
 
-changed = cache.get_changes()
-security = 0
+if [ -n "$REBOOT_REQUIRED" ]; then
+   echo "status err $REBOOT_REQUIRED, $UPDATES_SINGLE_LINE"
+   exit
+fi
 
-for package in changed:
-    for origin in package.candidate.origins:
-        if 'security' in origin.archive:
-            security += 1
+if [ $SECURITY_COUNT -gt 0 ]; then
+   STATUS="err"
+else
+   STATUS="ok"
+fi
 
-if security > 0:
-    print 'status %s %s packages with security updates' % (SECURITY_STATUS, security)
-elif len(changed) > 0:
-    print 'status %s %s packages changed status' % (CHANGED_STATUS, len(changed))
-else:
-    print 'status ok 0 packages changed status'
-
-print 'metric changed int %s' % len(changed)
-print 'metric security int %s' % security
-
+echo "status $STATUS $UPDATES_SINGLE_LINE"
 
